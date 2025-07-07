@@ -7,6 +7,7 @@
 #include <thread>
 #include <cstdarg>
 #include <condition_variable>
+#include "default.hpp"
 
 namespace Connection {
     constexpr const char* LOG_TAG = "[Connection]";
@@ -67,9 +68,13 @@ namespace Connection {
 
         public:
             TCPClient(const std::string& p_src_ip, const uint16_t p_src_port, const std::string& p_iface);
+            TCPClient(): m_src_ip(connection_defaults::client_ip.data()), m_src_port(connection_defaults::client_port), m_iface(connection_defaults::iface.data()) {}
             ~TCPClient();
 
             bool exc_connect(const std::string& p_dst_ip, const uint16_t p_dst_port);
+            bool exc_connect() {
+                return exc_connect(connection_defaults::server_ip.data(), connection_defaults::dst_port);
+            }
             void disconnect();
             friend std::ostream& operator<<(std::ostream& os, const TCPClient& conn);
     };

@@ -3,5 +3,6 @@
 
 int main(int, char**){
     std::cout << "Hello, from ReorderingAttack!\n";
-    Connection::TCPClient client("10.0.0.137", 12345, "lo");
+    Connection::TCPClient client;
+    client.exc_connect();
 }

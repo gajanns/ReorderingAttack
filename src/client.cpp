@@ -62,7 +62,7 @@ namespace Connection {
         return true;
     }
 
-
+    // Ain't nobody got time for libpcap, so we use good old tcpdump
     void TCPClient::sniff_syn_ack() {
         std::string filter = "tcp[tcpflags] & 0x12 == 0x12 and dst host " + m_src_ip +
                              " and dst port " + std::to_string(m_src_port);
@@ -88,8 +88,8 @@ namespace Connection {
         std::smatch match;
         std::regex pattern(R"(seq (\d+), ack (\d+))");
         if (std::regex_search(output, match, pattern) && match.size() == 3) {
-            m_server_state.set_seq(std::stoul(match[1]));
-            m_server_state.set_ack(std::stoul(match[2]));
+            m_server_state.set_seq(std::stoul(match[2]));
+            m_server_state.set_ack(std::stoul(match[1])+ 1);
         } else {
             std::cerr << "Failed to parse tcpdump output:..." << output;
         }
@@ -104,7 +104,10 @@ namespace Connection {
     bool TCPClient::exc_connect(const std::string& p_dst_ip, uint16_t p_dst_port) {
         if (m_sock_fd < 0) {
             std::cerr << LOG_TAG << " Socket not initialized.\n";
-            return false;
+            if (!init_socket()) {
+                std::cerr << LOG_TAG << " Failed to reinitialize socket.\n";
+                return false;
+            }
         }
 
         if (m_server_state.type == State::Type::CONNECTED) {
@@ -173,11 +176,6 @@ namespace Connection {
         m_server_state.set_ack(0);
         m_server_state.type = State::Type::DISCONNECTED;
         m_sniff_done = false;
-
-        // Re-initialize socket so the client is reusable
-        if (!init_socket()) {
-            std::cerr << LOG_TAG << " Failed to reinitialize socket.\n";
-        }
     }
 
     std::ostream& operator<<(std::ostream& os, const TCPClient& conn) {

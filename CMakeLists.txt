@@ -20,3 +20,6 @@ add_subdirectory(src)
 
 add_executable(ReorderingAttack main.cpp)
 target_link_libraries(ReorderingAttack Client)
+
+add_executable(Attack singleq_traffic_gen.cpp)
+target_link_libraries(Attack PacketBuilder)
