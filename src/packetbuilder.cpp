@@ -27,14 +27,22 @@ namespace PacketBuilder {
 
     std::vector<mmsghdr> PacketBatch::to_mmsg(std::vector<iovec>& iovecs) const {
         std::vector<mmsghdr> msgs;
-        size_t total = 2 + spoofed.size();
+        size_t total = spoofed.size();
+        if (!probe1.empty()) {
+            total += 1; // For probe1
+        }
+        if (!probe2.empty()) {
+            total += 1; // For probe2
+        }
 
         msgs.reserve(total);
         iovecs.reserve(total);
 
         // Add probe1
-        iovecs.emplace_back(iovec{ const_cast<char*>(probe1.data()), probe1.size() });
-        msgs.push_back(make_msg(iovecs.back()));
+        if (!probe1.empty()) {
+            iovecs.emplace_back(iovec{ const_cast<char*>(probe1.data()), probe1.size() });
+            msgs.push_back(make_msg(iovecs.back()));
+        }
 
         // Add spoofed packets
         for (const auto& pkt : spoofed) {
@@ -43,8 +51,10 @@ namespace PacketBuilder {
         }
 
         // Add probe2
-        iovecs.emplace_back(iovec{ const_cast<char*>(probe2.data()), probe2.size() });
-        msgs.push_back(make_msg(iovecs.back()));
+        if (!probe2.empty()) {
+            iovecs.emplace_back(iovec{ const_cast<char*>(probe2.data()), probe2.size() });
+            msgs.push_back(make_msg(iovecs.back()));
+        }
 
         return msgs;
     }

@@ -15,11 +15,17 @@ namespace Connection::Defaults {
     inline constexpr std::string_view iface = "enp1s0np1";
 }
 
-namespace Attacker::Defaults {
+namespace SingleQAttacker::Defaults {
     inline constexpr std::string_view attacker_ip = "10.100.2.1";
     inline constexpr uint16_t attacker_port = 65021;
     inline constexpr uint16_t probe1_port = 65011; 
     inline constexpr uint16_t probe2_port = 65031;
+}
+
+namespace MultiQAttacker::Defaults {
+    inline constexpr std::string_view attacker_ip = "10.100.2.1";
+    inline constexpr uint16_t probe1_port = 65011; 
+    inline constexpr uint16_t probe2_port = 65030;
 }
 
 namespace PacketBuilder::Defaults {
@@ -30,13 +36,13 @@ namespace PacketBuilder::Defaults {
 
     inline Config probe_config(int id = 0) {
         return Config{
-            .src_ip = std::string(Attacker::Defaults::attacker_ip),
+            .src_ip = std::string(SingleQAttacker::Defaults::attacker_ip),
             .dst_ip = std::string(Connection::Defaults::server_ip),
             .src_port = [&id]{
                 switch (id) {
-                    case 1: return Attacker::Defaults::probe1_port;
-                    case 2: return Attacker::Defaults::probe2_port;
-                    default: return Attacker::Defaults::attacker_port;
+                    case 1: return SingleQAttacker::Defaults::probe1_port;
+                    case 2: return SingleQAttacker::Defaults::probe2_port;
+                    default: return SingleQAttacker::Defaults::attacker_port;
                 }
             }(),
             .dst_port = Connection::Defaults::dst_port,

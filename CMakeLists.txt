@@ -26,3 +26,6 @@ target_link_libraries(Sample PRIVATE Client)
 
 add_executable(SingleQTrafficGen singleq_traffic_gen.cpp)
 target_link_libraries(SingleQTrafficGen PRIVATE PacketBuilder Client)
+
+add_executable(MultiQRSSTrafficGen multiq_rss_traffic_gen.cpp)
+target_link_libraries(MultiQRSSTrafficGen PRIVATE PacketBuilder)

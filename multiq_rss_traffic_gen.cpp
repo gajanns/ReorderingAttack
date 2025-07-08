@@ -1,10 +1,9 @@
 /*######################################################################################################
-# Experiment: Single Queue Traffic Generator
-# Description: Generate traffic directed at a single rx queue for in- and out-of-connection scenario
+# Experiment: Multi Queue Traffic Generator (RSS)
+# Description: Generate traffic directed at a two rx queues for concurrency verification
 ######################################################################################################*/
 
 #include "packetbuilder.hpp"
-#include "client.hpp"
 #include "default.hpp"
 
 #include <netinet/in.h>
@@ -13,14 +12,13 @@
 #include <chrono>
 #include <arpa/inet.h>
 #include <cstring>
+#include <thread>
 
 // ########################################################################################
 // # Region: Configuration
 // ########################################################################################
 
-const size_t num_iterations = 10;
-const size_t seq_length = 16;
-const std::string payload = "ABC";
+const size_t num_iterations = 100;
 
 // ########################################################################################
 // # Region: Initialize Sender Socket
@@ -56,32 +54,13 @@ int setup_raw_socket(const std::string_view p_iface) {
 int main() {
 
     // ####################################################################################
-    // # Region: Initialize Client (Optional)
-    // ####################################################################################
-
-    Connection::TCPClient client;
-    if (!client.extended_connect()) {
-        std::cerr << "Failed to connect to server." << std::endl;
-        return 1;
-    }
-
-    auto [base_seq, base_ack] = client.server_state();
-
-    // ####################################################################################
     // # Region: Packet Configuration
     // ####################################################################################
 
     auto probe1_cfg = PacketBuilder::Defaults::probe_config(1);
+    probe1_cfg.src_port = MultiQAttacker::Defaults::probe1_port;
     auto probe2_cfg = PacketBuilder::Defaults::probe_config(2);
-    auto non_spoof_cfg = PacketBuilder::Defaults::probe_config();
-    auto spoof_cfg = PacketBuilder::Defaults::spoof_config();
-    spoof_cfg.seq = non_spoof_cfg.seq = base_seq;
-    spoof_cfg.ack = non_spoof_cfg.ack = base_ack;
-    spoof_cfg.payload = non_spoof_cfg.payload = payload;
-    spoof_cfg.psh = non_spoof_cfg.psh = !payload.empty();
-
-    const uint32_t delta_seq = (!payload.empty() || spoof_cfg.psh || spoof_cfg.syn || spoof_cfg.rst) ?
-                                std::max(static_cast<uint32_t>(payload.size()), 1u) : 0;
+    probe2_cfg.src_port = MultiQAttacker::Defaults::probe2_port;
 
     // ####################################################################################
     // # Region: Setup Socket
@@ -105,12 +84,10 @@ int main() {
     // ####################################################################################
     
     for (size_t i = 0; i < num_iterations; ++i) {
-        bool in_connection = std::rand() % 2 == 0;
-        auto& current_cfg = in_connection ? spoof_cfg : non_spoof_cfg;
 
         PacketBuilder::PacketBatch batch = {
-            .probe1 = build_packet(probe1_cfg),
-            .spoofed = build_packet_batch(current_cfg, seq_length),
+            .probe1 = std::vector<char>(),
+            .spoofed = PacketBuilder::build_packet_batch(probe1_cfg,2),
             .probe2 = build_packet(probe2_cfg)
         };
 
@@ -129,15 +106,9 @@ int main() {
         if (sent < 0) {
             perror("sendmmsg");
         } else {
-            std::cout << "Batch " << (i + 1) << ": Sent " << sent << " packets, "
-                      << "type=" << (in_connection ? "IN-CONNECTION" : "OUT-OF-CONNECTION") << ", "
-                      << "seq=" << current_cfg.seq << ", ack=" << current_cfg.ack << ", ∆t="
-                      << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()
-                      << " µs\n";
-        }
-
-        if(in_connection) {
-            spoof_cfg.seq += delta_seq * seq_length;
+            std::cout   << "Batch " << (i + 1) << ": Sent " << sent << " packets, "
+                        << "Time taken: " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()
+                        << " microseconds" << std::endl;
         }
 
         std::this_thread::sleep_for(std::chrono::microseconds(1000));
