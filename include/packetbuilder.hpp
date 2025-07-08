@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <sys/socket.h>
 
-namespace packet_builder {
+namespace PacketBuilder {
 
     struct Config {
         std::string src_ip;

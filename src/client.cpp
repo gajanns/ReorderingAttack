@@ -68,40 +68,44 @@ namespace Connection {
                              " and dst port " + std::to_string(m_src_port);
         std::string cmd = "timeout 5s tcpdump -i " + m_iface + " -nn -l -c 1 \"" + filter + "\" 2>/dev/null";
 
-        FILE* pipe = popen(cmd.c_str(), "r");
-        if (!pipe) {
-            std::cerr << "Failed to start tcpdump...";
-            return;
-        }
+        try {
+            FILE* pipe = popen(cmd.c_str(), "r");
+            if (!pipe) {
+                throw std::runtime_error("Failed to run tcpdump command");
+            }
 
-        char buffer[512];
-        std::string output;
-        while (fgets(buffer, sizeof(buffer), pipe)) {
-            output += buffer;
-        }
+            char buffer[512];
+            std::string output;
+            while (fgets(buffer, sizeof(buffer), pipe)) {
+                output += buffer;
+            }
 
-        int status = pclose(pipe);
-        if (status != 0) {
-            std::cerr << "tcpdump exited abnormally or timed out....";
-        }
+            int status = pclose(pipe);
+            if (status != 0) {
+                throw std::runtime_error("tcpdump exited abnormally or timed out");
+            }
 
-        std::smatch match;
-        std::regex pattern(R"(seq (\d+), ack (\d+))");
-        if (std::regex_search(output, match, pattern) && match.size() == 3) {
-            m_server_state.set_seq(std::stoul(match[2]));
-            m_server_state.set_ack(std::stoul(match[1])+ 1);
-        } else {
-            std::cerr << "Failed to parse tcpdump output:..." << output;
-        }
+            std::smatch match;
+            std::regex pattern(R"(seq (\d+), ack (\d+))");
+            if (std::regex_search(output, match, pattern) && match.size() == 3) {
+                m_server_state.set_seq(std::stoul(match[2]));
+                m_server_state.set_ack(std::stoul(match[1])+ 1);
+            } else {
+                throw std::runtime_error("Failed to parse tcpdump output: " + output);
+            }
 
-        {
-            std::lock_guard<std::mutex> lock(m_sniff_mutex);
-            m_sniff_done = true;
+            {
+                std::lock_guard<std::mutex> lock(m_sniff_mutex);
+                m_sniff_done = true;
+            }
+        }
+        catch (const std::exception& e) {
+            std::cerr << LOG_TAG << " Exception in sniffing thread: " << e.what() << "\n";
         }
         m_sniff_cv.notify_one();
     }
 
-    bool TCPClient::exc_connect(const std::string& p_dst_ip, uint16_t p_dst_port) {
+    bool TCPClient::extended_connect(const std::string& p_dst_ip, uint16_t p_dst_port) {
         if (m_sock_fd < 0) {
             std::cerr << LOG_TAG << " Socket not initialized.\n";
             if (!init_socket()) {
@@ -175,7 +179,10 @@ namespace Connection {
         m_server_state.set_seq(0);
         m_server_state.set_ack(0);
         m_server_state.type = State::Type::DISCONNECTED;
-        m_sniff_done = false;
+        {
+            std::lock_guard<std::mutex> lock(m_sniff_mutex);
+            m_sniff_done = false;
+        }
     }
 
     std::ostream& operator<<(std::ostream& os, const TCPClient& conn) {

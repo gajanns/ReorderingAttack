@@ -10,7 +10,8 @@
 #include "default.hpp"
 
 namespace Connection {
-    constexpr const char* LOG_TAG = "[Connection]";
+    inline constexpr std::string_view LOG_TAG = "[Connection]";
+
     struct State {
         private:
             uint32_t m_seq;
@@ -43,6 +44,9 @@ namespace Connection {
             } type;
 
             State() : m_seq(0), m_ack(0), type(Type::DISCONNECTED) {}
+            State(const State&) = delete;
+            State& operator=(const State&) = delete;
+
 
             friend std::ostream& operator<<(std::ostream& os, const State& state) {
                 os << (state.type == State::Type::CONNECTED ? "CONNECTED" : "DISCONNECTED")
@@ -68,15 +72,20 @@ namespace Connection {
 
         public:
             TCPClient(const std::string& p_src_ip, const uint16_t p_src_port, const std::string& p_iface);
-            TCPClient(): m_src_ip(connection_defaults::client_ip.data()), m_src_port(connection_defaults::client_port), m_iface(connection_defaults::iface.data()) {}
+            TCPClient()
+                : TCPClient(Defaults::client_ip.data(), Defaults::client_port, Defaults::iface.data()) {}
             ~TCPClient();
 
-            bool exc_connect(const std::string& p_dst_ip, const uint16_t p_dst_port);
-            bool exc_connect() {
-                return exc_connect(connection_defaults::server_ip.data(), connection_defaults::dst_port);
+            bool extended_connect(const std::string& p_dst_ip, const uint16_t p_dst_port);
+            bool extended_connect() {
+                return extended_connect(Defaults::server_ip.data(), Defaults::dst_port);
             }
             void disconnect();
             friend std::ostream& operator<<(std::ostream& os, const TCPClient& conn);
+
+            std::pair<uint32_t, uint32_t> server_state() const {
+                return std::make_pair(m_server_state.seq(), m_server_state.ack());
+            }
     };
 
 } // namespace Connection

@@ -6,8 +6,9 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#include <iostream>
 
-namespace packet_builder {
+namespace PacketBuilder {
 
     struct PseudoHeader {
         uint32_t src_addr;
@@ -89,8 +90,16 @@ namespace packet_builder {
         iph->frag_off = 0;
         iph->ttl = 64;
         iph->protocol = IPPROTO_TCP;
-        iph->saddr = inet_addr(config.src_ip.c_str());
-        iph->daddr = inet_addr(config.dst_ip.c_str());
+        in_addr src{}, dst{};
+        if (inet_pton(AF_INET, config.src_ip.c_str(), &src) != 1 ||
+            inet_pton(AF_INET, config.dst_ip.c_str(), &dst) != 1) {
+            std::cerr << "Invalid source or destination IP address.\n";
+            return {}; // Invalid IPs
+        }
+
+        iph->saddr = src.s_addr;
+        iph->daddr = dst.s_addr;
+
         iph->check = compute_checksum(reinterpret_cast<uint16_t*>(iph), sizeof(iphdr));
 
         tcph->source = htons(config.src_port);

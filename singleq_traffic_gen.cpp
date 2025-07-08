@@ -1,4 +1,10 @@
+/*######################################################################################################
+# Experiment: Single Queue Traffic Generator
+# Description: Generate traffic directed at a single rx queue for in- and out-of-connection scenario
+# #####################################################################################################*/
+
 #include "packetbuilder.hpp"
+#include "client.hpp"
 #include "default.hpp"
 
 #include <netinet/in.h>
@@ -8,16 +14,22 @@
 #include <arpa/inet.h>
 #include <cstring>
 
-using namespace packet_builder;
+#pragma region Configuration
+const size_t num_iterations = 2;
+const size_t seq_length = 3;
+const std::string payload = "ABC";
+#pragma endregion
 
-int setup_raw_socket(const std::string_view iface) {
+
+#pragma region Initialize Sender Socket
+int setup_raw_socket(const std::string_view p_iface) {
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if (sock < 0) {
         perror("socket");
         return -1;
     }
 
-    if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, iface.data(), iface.size() + 1) < 0) {
+    if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, p_iface.data(), p_iface.size() + 1) < 0) {
         perror("setsockopt(SO_BINDTODEVICE)");
         close(sock);
         return -1;
@@ -32,50 +44,59 @@ int setup_raw_socket(const std::string_view iface) {
 
     return sock;
 }
+#pragma endregion
 
 
 int main() {
-    const size_t num_iterations = 1;
-    const size_t seq_length = 3;
-    const uint32_t base_seq = 1000;
-    const uint32_t base_ack = 5000;
+    
+    #pragma region Initialize Client(Optional)
+    Connection::TCPClient client;
+    if (!client.extended_connect()) {
+        std::cerr << "Failed to connect to server." << std::endl;
+        return 1;
+    }
 
-    // Optional spoof payload
-    std::string payload = "ABC";  // Can be "" for no payload
+    auto [base_seq, base_ack] = client.server_state();
+    #pragma endregion
 
-    // Setup probe/spoof config
-    Config probe_cfg = packet_builder_defaults::probe_config(); // used for RST detection; seq/ack don't matter
-    Config non_spoof_cfg = packet_builder_defaults::probe_config();
-    Config spoof_cfg = packet_builder_defaults::spoof_config();
+    #pragma region Packet Configuration
+    auto probe1_cfg = PacketBuilder::Defaults::probe_config(1);
+    auto probe2_cfg = PacketBuilder::Defaults::probe_config(2);
+    auto non_spoof_cfg = PacketBuilder::Defaults::probe_config();
+    auto spoof_cfg = PacketBuilder::Defaults::spoof_config();
     spoof_cfg.seq = non_spoof_cfg.seq = base_seq; // Set a base SEQ for spoofed packets
     spoof_cfg.ack = non_spoof_cfg.ack = base_ack; // Set a base ACK for spoofed packets
     spoof_cfg.payload = non_spoof_cfg.payload = payload;
     spoof_cfg.psh = non_spoof_cfg.psh = !payload.empty();
 
-    bool need_space = !payload.empty() || spoof_cfg.psh || spoof_cfg.syn || spoof_cfg.rst;
-    const uint32_t delta_seq = need_space ? std::max(static_cast<uint32_t>(payload.size()), 1u) : 0;
+    const uint32_t delta_seq = (!payload.empty() || spoof_cfg.psh || spoof_cfg.syn || spoof_cfg.rst) ? 
+                                std::max(static_cast<uint32_t>(payload.size()), 1u) : 0;
+    #pragma endregion
 
-    int sock = setup_raw_socket(connection_defaults::iface);
+    #pragma region Setup Socket
+    int sock = setup_raw_socket(Connection::Defaults::iface);
     if (sock < 0) return 1;
 
     sockaddr_in dest_addr{};
     dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(probe_cfg.dst_port);
+    dest_addr.sin_port = htons(Connection::Defaults::dst_port);
 
-    if (inet_pton(AF_INET, probe_cfg.dst_ip.c_str(), &dest_addr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, Connection::Defaults::server_ip.data(), &dest_addr.sin_addr) <= 0) {
         perror("inet_pton");
         close(sock);
         return 1;
     }
+    #pragma endregion
 
+    #pragma region Traffic Generation
     for (size_t i = 0; i < num_iterations; ++i) {
         bool in_connection = std::rand() % 2 == 0;
-        Config& current_cfg = in_connection ? spoof_cfg : non_spoof_cfg;
+        auto& current_cfg = in_connection ? spoof_cfg : non_spoof_cfg;
 
-        PacketBatch batch = {
-            .probe1 = build_packet(probe_cfg),
+        PacketBuilder::PacketBatch batch = {
+            .probe1 = build_packet(probe1_cfg),
             .spoofed = build_packet_batch(current_cfg, seq_length),
-            .probe2 = build_packet(probe_cfg)
+            .probe2 = build_packet(probe2_cfg)
         };
 
         std::vector<iovec> iovecs;
@@ -98,16 +119,16 @@ int main() {
                       << "seq=" << current_cfg.seq << ", ack=" << current_cfg.ack << ", ∆t="
                       << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()
                       << " µs\n";
-
         }
 
         if(in_connection) {
             spoof_cfg.seq += delta_seq * seq_length;
         }
 
-        usleep(1000); // Optional: sleep 1ms between batches
+        std::this_thread::sleep_for(std::chrono::microseconds(1000));
     }
-
     close(sock);
+    #pragma endregion
+
     return 0;
 }
