@@ -17,7 +17,9 @@ namespace Connection {
         : m_src_ip(p_src_ip), m_src_port(p_src_port), m_iface(p_iface), m_sock_fd(-1) {
 
         if (!init_socket()) {
-            throw std::runtime_error("Failed to initialize socket");
+            std::cerr << LOG_TAG << " Failed to initialize socket with IP: " << m_src_ip
+                      << ", port: " << m_src_port << ", interface: " << m_iface << "\n";
+            return;
         }
 
         std::cout << LOG_TAG << " Client initialized at IP: " << m_src_ip

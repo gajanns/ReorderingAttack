@@ -1,19 +1,25 @@
+/*######################################################################################################
+# Experiment: General (Single Queue for now)
+# Description: Encapsulate default configurations for connection and attacker settings
+# #####################################################################################################*/
+
 #pragma once
+
 #include "packetbuilder.hpp"
 
 namespace Connection::Defaults {
-    inline constexpr std::string_view server_ip = "10.0.3.45";
+    inline constexpr std::string_view server_ip = "10.100.2.2";
     inline constexpr uint16_t dst_port = 8080;
-    inline constexpr std::string_view client_ip = "10.0.3.45";
-    inline constexpr uint16_t client_port = 12340;
-    inline constexpr std::string_view iface = "lo";
+    inline constexpr std::string_view client_ip = "10.100.2.100";
+    inline constexpr uint16_t client_port = 65000;
+    inline constexpr std::string_view iface = "enp1s0np1";
 }
 
 namespace Attacker::Defaults {
-    inline constexpr std::string_view attacker_ip = "10.0.3.45";
-    inline constexpr uint16_t attacker_port = 12345;
-    inline constexpr uint16_t probe1_port = 12346; 
-    inline constexpr uint16_t probe2_port = 12347;
+    inline constexpr std::string_view attacker_ip = "10.100.2.1";
+    inline constexpr uint16_t attacker_port = 65021;
+    inline constexpr uint16_t probe1_port = 65011; 
+    inline constexpr uint16_t probe2_port = 65031;
 }
 
 namespace PacketBuilder::Defaults {

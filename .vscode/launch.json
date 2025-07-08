@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Main",
+            "name": "Sample",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/bin/ReorderingAttack",
+            "program": "${workspaceFolder}/build/bin/Sample",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -25,10 +25,10 @@
             "preLaunchTask": "build"
         },
         {
-            "name": "Attack",
+            "name": "SingleQTrafficGen",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/bin/Attack",
+            "program": "${workspaceFolder}/build/bin/SingleQTrafficGen",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

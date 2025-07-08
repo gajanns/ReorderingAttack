@@ -1,4 +1,10 @@
+/*######################################################################################################
+# Experiment: General
+# Description: Packet builder for TCP packets with optional payload
+# #####################################################################################################*/
+
 #pragma once
+
 #include <vector>
 #include <string>
 #include <cstdint>

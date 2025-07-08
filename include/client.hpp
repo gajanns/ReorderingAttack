@@ -1,3 +1,8 @@
+/*######################################################################################################
+# Experiment: General
+# Description: Establish a TCP connection to a server and extract initial window
+# #####################################################################################################*/
+
 #pragma once
 
 #include <string>

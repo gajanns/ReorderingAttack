@@ -1,7 +1,7 @@
 /*######################################################################################################
 # Experiment: Single Queue Traffic Generator
 # Description: Generate traffic directed at a single rx queue for in- and out-of-connection scenario
-# #####################################################################################################*/
+######################################################################################################*/
 
 #include "packetbuilder.hpp"
 #include "client.hpp"
@@ -14,14 +14,18 @@
 #include <arpa/inet.h>
 #include <cstring>
 
-#pragma region Configuration
-const size_t num_iterations = 2;
-const size_t seq_length = 3;
+// ########################################################################################
+// # Region: Configuration
+// ########################################################################################
+
+const size_t num_iterations = 300;
+const size_t seq_length = 16;
 const std::string payload = "ABC";
-#pragma endregion
 
+// ########################################################################################
+// # Region: Initialize Sender Socket
+// ########################################################################################
 
-#pragma region Initialize Sender Socket
 int setup_raw_socket(const std::string_view p_iface) {
     int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if (sock < 0) {
@@ -44,12 +48,17 @@ int setup_raw_socket(const std::string_view p_iface) {
 
     return sock;
 }
-#pragma endregion
 
+// ########################################################################################
+// # Region: Main
+// ########################################################################################
 
 int main() {
-    
-    #pragma region Initialize Client(Optional)
+
+    // ####################################################################################
+    // # Region: Initialize Client (Optional)
+    // ####################################################################################
+
     Connection::TCPClient client;
     if (!client.extended_connect()) {
         std::cerr << "Failed to connect to server." << std::endl;
@@ -57,23 +66,27 @@ int main() {
     }
 
     auto [base_seq, base_ack] = client.server_state();
-    #pragma endregion
 
-    #pragma region Packet Configuration
+    // ####################################################################################
+    // # Region: Packet Configuration
+    // ####################################################################################
+
     auto probe1_cfg = PacketBuilder::Defaults::probe_config(1);
     auto probe2_cfg = PacketBuilder::Defaults::probe_config(2);
     auto non_spoof_cfg = PacketBuilder::Defaults::probe_config();
     auto spoof_cfg = PacketBuilder::Defaults::spoof_config();
-    spoof_cfg.seq = non_spoof_cfg.seq = base_seq; // Set a base SEQ for spoofed packets
-    spoof_cfg.ack = non_spoof_cfg.ack = base_ack; // Set a base ACK for spoofed packets
+    spoof_cfg.seq = non_spoof_cfg.seq = base_seq;
+    spoof_cfg.ack = non_spoof_cfg.ack = base_ack;
     spoof_cfg.payload = non_spoof_cfg.payload = payload;
     spoof_cfg.psh = non_spoof_cfg.psh = !payload.empty();
 
-    const uint32_t delta_seq = (!payload.empty() || spoof_cfg.psh || spoof_cfg.syn || spoof_cfg.rst) ? 
+    const uint32_t delta_seq = (!payload.empty() || spoof_cfg.psh || spoof_cfg.syn || spoof_cfg.rst) ?
                                 std::max(static_cast<uint32_t>(payload.size()), 1u) : 0;
-    #pragma endregion
 
-    #pragma region Setup Socket
+    // ####################################################################################
+    // # Region: Setup Socket
+    // ####################################################################################
+
     int sock = setup_raw_socket(Connection::Defaults::iface);
     if (sock < 0) return 1;
 
@@ -86,9 +99,11 @@ int main() {
         close(sock);
         return 1;
     }
-    #pragma endregion
 
-    #pragma region Traffic Generation
+    // ####################################################################################
+    // # Region: Traffic Generation
+    // ####################################################################################
+    
     for (size_t i = 0; i < num_iterations; ++i) {
         bool in_connection = std::rand() % 2 == 0;
         auto& current_cfg = in_connection ? spoof_cfg : non_spoof_cfg;
@@ -127,8 +142,7 @@ int main() {
 
         std::this_thread::sleep_for(std::chrono::microseconds(1000));
     }
-    close(sock);
-    #pragma endregion
 
+    close(sock);
     return 0;
 }
