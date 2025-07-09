@@ -18,7 +18,7 @@
 // # Region: Configuration
 // ########################################################################################
 
-const size_t num_iterations = 10;
+const size_t num_iterations = 1000;
 const size_t seq_length = 16;
 const std::string payload = "ABC";
 
@@ -140,7 +140,7 @@ int main() {
             spoof_cfg.seq += delta_seq * seq_length;
         }
 
-        std::this_thread::sleep_for(std::chrono::microseconds(1000));
+        std::this_thread::sleep_for(std::chrono::microseconds(10000));
     }
 
     close(sock);

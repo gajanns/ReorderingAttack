@@ -18,7 +18,7 @@
 // # Region: Configuration
 // ########################################################################################
 
-const size_t num_iterations = 100;
+const size_t num_iterations = 1000;
 
 // ########################################################################################
 // # Region: Initialize Sender Socket
@@ -58,9 +58,9 @@ int main() {
     // ####################################################################################
 
     auto probe1_cfg = PacketBuilder::Defaults::probe_config(1);
-    probe1_cfg.src_port = MultiQAttacker::Defaults::probe1_port;
+    probe1_cfg.src_port = MultiQAttacker::Defaults::queue0_port;
     auto probe2_cfg = PacketBuilder::Defaults::probe_config(2);
-    probe2_cfg.src_port = MultiQAttacker::Defaults::probe2_port;
+    probe2_cfg.src_port = MultiQAttacker::Defaults::queue1_port;
 
     // ####################################################################################
     // # Region: Setup Socket
@@ -111,7 +111,7 @@ int main() {
                         << " microseconds" << std::endl;
         }
 
-        std::this_thread::sleep_for(std::chrono::microseconds(1000));
+        std::this_thread::sleep_for(std::chrono::microseconds(10000));
     }
 
     close(sock);

@@ -24,8 +24,9 @@ namespace SingleQAttacker::Defaults {
 
 namespace MultiQAttacker::Defaults {
     inline constexpr std::string_view attacker_ip = "10.100.2.1";
-    inline constexpr uint16_t probe1_port = 65011; 
-    inline constexpr uint16_t probe2_port = 65030;
+    inline constexpr uint16_t queue0_port = 65011;
+    inline constexpr uint16_t queue1_port = 65030;
+    inline constexpr uint16_t queue1_port2 = 65040;
 }
 
 namespace PacketBuilder::Defaults {
